@@ -9,7 +9,7 @@
 <body>
     <div id="screen-start" class="screen">
         <h1>Futble</h1>
-        <input type="text" id="username" placeholder="Nombre">
+        <input type="text" id="username" placeholder="Tu Nombre">
         <div class="button-group">
             <button onclick="startSolo()" class="btn-solo">Jugar Solo</button>
             <button onclick="createRoom()" class="btn-create">Crear Sala</button>
@@ -43,14 +43,14 @@
         <h1 id="winner-text"></h1>
         
         <div id="stats-solo" class="stats-container" style="display:none">
-    <h2>Estadísticas (Solo)</h2>
-    <div class="stats-grid">
-        <div class="stat-box"><b id="stat-played">0</b><br>Partidas</div>
-        <div class="stat-box"><b id="stat-win-pct">0%</b><br>Victorias</div>
-        <div class="stat-box"><b id="stat-streak">0</b><br>Racha</div>
-    </div>
-    <p>Intentos última partida: <span id="attempts-used">0</span>/6</p>
-</div>
+            <h2>Tus Estadísticas</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><b id="stat-played">0</b><br>Partidas</div>
+                <div class="stat-box"><b id="stat-win-pct">0%</b><br>Victorias</div>
+                <div class="stat-box"><b id="stat-streak">0</b><br>Racha</div>
+            </div>
+            <p>Intentos: <span id="attempts-used">0</span>/6 | Categoría: <span id="result-category"></span></p>
+        </div>
 
         <div id="scoreboard" class="scoreboard-container" style="display:none">
             <h2>Marcador</h2>
@@ -59,8 +59,8 @@
 
         <div class="button-group">
             <button id="btn-replay" onclick="playAgain()" class="btn-replay" style="display:none">JUGAR OTRA VEZ</button>
-            <button id="btn-exit" onclick="exitGame()" class="btn-exit" style="display:none">SALIR</button>
-            <p id="wait-message" style="display:none; color: #818384;">Esperando decisión del anfitrión...</p>
+            <button id="btn-exit" onclick="exitGame()" class="btn-exit" style="display:none">SALIR AL MENÚ</button>
+            <p id="wait-message" style="display:none; color: #818384;">Esperando al anfitrión...</p>
         </div>
     </div>
 

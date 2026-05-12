@@ -7,10 +7,15 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
+// BASE DE DATOS MULTIJUGADOR
 const wordsBank = [
-    { word: "MESSI", cat: "LEYENDAS" }, { word: "MBAPPE", cat: "JUGADOR" },
-    { word: "RONALDO", cat: "LEYENDAS" }, { word: "KLOPP", cat: "TECNICOS" },
-    { word: "BERNABEU", cat: "ESTADIO" }, { word: "MADRID", cat: "CLUB" }
+    { word: "MESSI", cat: "LEYENDAS" },
+    { word: "MBAPPE", cat: "JUGADOR" },
+    { word: "RONALDO", cat: "LEYENDAS" },
+    { word: "KLOPP", cat: "TECNICOS" },
+    { word: "BERNABEU", cat: "ESTADIO" },
+    { word: "MADRID", cat: "CLUB" },
+    { word: "BARCELONA", cat: "CLUB" }
 ];
 
 let rooms = {};
@@ -39,7 +44,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startGame', (roomCode) => {
-        io.to(roomCode).emit('gameStarted', rooms[roomCode].gameData);
+        if (rooms[roomCode]) io.to(roomCode).emit('gameStarted', rooms[roomCode].gameData);
     });
 
     socket.on('finished', ({ roomCode, name }) => {
@@ -59,10 +64,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('hostExit', (roomCode) => {
-        delete rooms[roomCode];
-        io.to(roomCode).emit('hostExited');
+        if (rooms[roomCode]) {
+            delete rooms[roomCode];
+            io.to(roomCode).emit('hostExited');
+        }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Puerto ${PORT}`));
+server.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
