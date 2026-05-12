@@ -207,3 +207,97 @@ function displayResultSolo(txt) {
     document.getElementById('btn-exit').style.display = 'block';
     showScreen('screen-result');
 }
+// ... (Mantén las variables del inicio igual) ...
+
+// Función para actualizar colores del teclado con jerarquía
+function updateKeyboardColor(letter, status) {
+    const btn = document.getElementById(`key-${letter}`);
+    if (!btn) return;
+
+    // Prioridad: 1. Correct (Verde), 2. Present (Amarillo), 3. Absent (Gris)
+    if (btn.classList.contains('correct')) return; // Si ya está en verde, no cambia
+    if (btn.classList.contains('present') && status === 'present') return; // Si ya está amarillo, no cambia a amarillo
+
+    btn.classList.remove('present', 'absent'); 
+    btn.classList.add(status);
+}
+
+// Lógica de Estadísticas (LocalStorage)
+function saveStats(won) {
+    let stats = JSON.parse(localStorage.getItem('futble_stats')) || { played: 0, wins: 0, streak: 0 };
+    
+    stats.played += 1;
+    if (won) {
+        stats.wins += 1;
+        stats.streak += 1;
+    } else {
+        stats.streak = 0;
+    }
+    
+    localStorage.setItem('futble_stats', JSON.stringify(stats));
+    return stats;
+}
+
+// Reemplaza tu función submitGuess por esta mejorada
+function submitGuess() {
+    const guess = guesses[currentRow];
+    const startIdx = currentRow * targetWord.length;
+    
+    for (let i = 0; i < targetWord.length; i++) {
+        const cell = document.getElementById(`cell-${startIdx + i}`);
+        const letter = guess[i];
+        let status = 'absent';
+
+        if (letter === targetWord[i]) {
+            status = 'correct';
+        } else if (targetWord.includes(letter)) {
+            status = 'present';
+        }
+
+        cell.classList.add(status);
+        updateKeyboardColor(letter, status); // <-- Llamada para pintar el teclado
+    }
+
+    if (guess === targetWord) {
+        if(currentRoom) {
+            socket.emit('finished', { roomCode: currentRoom, name: myName });
+        } else {
+            const finalStats = saveStats(true);
+            displayResultSolo("¡GANASTE!", finalStats);
+        }
+    } else {
+        currentRow++;
+        currentCol = 0;
+        if (currentRow === 6) {
+            if (currentRoom) {
+                socket.emit('finished', { roomCode: currentRoom, name: "Nadie" });
+            } else {
+                const finalStats = saveStats(false);
+                displayResultSolo("PERDISTE. ERA: " + targetWord, finalStats);
+            }
+        }
+    }
+}
+
+// Reemplaza tu displayResultSolo por esta
+function displayResultSolo(txt, stats) {
+    document.getElementById('winner-text').innerText = txt;
+    document.getElementById('stats-solo').style.display = 'block';
+    document.getElementById('scoreboard').style.display = 'none';
+    
+    // Calcular % de victorias
+    const winPct = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+    
+    document.getElementById('stat-played').innerText = stats.played;
+    document.getElementById('stat-win-pct').innerText = winPct + "%";
+    document.getElementById('stat-streak').innerText = stats.streak;
+    
+    document.getElementById('attempts-used').innerText = currentRow === 6 && txt.includes("PERDISTE") ? "X" : (currentRow + (txt.includes("GANASTE") ? 1 : 0));
+    document.getElementById('result-category').innerText = category;
+    
+    document.getElementById('btn-replay').style.display = 'block';
+    document.getElementById('btn-exit').style.display = 'block';
+    showScreen('screen-result');
+}
+
+// ... (El resto de funciones como renderKeyboard e initGame se quedan igual) ...

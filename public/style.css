@@ -42,9 +42,21 @@ button:active { transform: scale(0.95); }
 #board { 
     display: grid; 
     gap: 2px; /* Casillas más juntas */
-    margin-bottom: 20px; 
+    margin-bottom: 5px; 
     justify-content: center; 
 }
+/* Asegúrate de que estas clases existan para el teclado */
+.key.correct { background-color: #538d4e !important; }
+.key.present { background-color: #b59f3b !important; }
+.key.absent { background-color: #3a3a3c !important; color: #818384; }
+
+.stats-grid {
+    display: flex;
+    justify-content: space-around;
+    margin: 15px 0;
+}
+.stat-box { font-size: 0.9rem; text-align: center; }
+.stat-box b { font-size: 1.4rem; color: #538d4e; }
 
 .cell {
     width: 52px; height: 52px;
