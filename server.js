@@ -9,13 +9,10 @@ app.use(express.static('public'));
 
 // BASE DE DATOS MULTIJUGADOR
 const wordsBank = [
-    { word: "MESSI", cat: "LEYENDAS" },
-    { word: "MBAPPE", cat: "JUGADOR" },
-    { word: "RONALDO", cat: "LEYENDAS" },
-    { word: "KLOPP", cat: "TECNICOS" },
-    { word: "BERNABEU", cat: "ESTADIO" },
-    { word: "MADRID", cat: "CLUB" },
-    { word: "BARCELONA", cat: "CLUB" }
+    { word: "MESSI", cat: "LEYENDAS" }, { word: "MBAPPE", cat: "JUGADOR" },
+    { word: "RONALDO", cat: "LEYENDAS" }, { word: "KLOPP", cat: "TECNICOS" },
+    { word: "BERNABEU", cat: "ESTADIO" }, { word: "MADRID", cat: "CLUB" },
+    { word: "BARCELONA", cat: "CLUB" }, { word: "CASILLAS", cat: "LEYENDAS" }
 ];
 
 let rooms = {};
@@ -34,12 +31,13 @@ io.on('connection', (socket) => {
 
     socket.on('joinRoom', ({ name, roomCode }) => {
         const room = rooms[roomCode];
-        if (room && room.players.length < 2) {
+        // AHORA PERMITE HASTA 10 JUGADORES
+        if (room && room.players.length < 10) {
             room.players.push({ id: socket.id, name, wins: 0 });
             socket.join(roomCode);
             io.to(roomCode).emit('playerJoined', { players: room.players, gameData: room.gameData });
         } else {
-            socket.emit('error', 'Sala no disponible');
+            socket.emit('error', 'Sala llena o no existe');
         }
     });
 
@@ -72,4 +70,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
+server.listen(PORT, () => console.log(`Servidor listo en puerto ${PORT}`));

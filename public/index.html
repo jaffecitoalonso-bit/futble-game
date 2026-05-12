@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futble</title>
+    <title>Futble | Wordle de Fútbol</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
         <h1>Futble</h1>
         <input type="text" id="username" placeholder="Tu Nombre">
         <div class="button-group">
-            <button onclick="startSolo()" class="btn-solo">Jugar Solo</button>
+            <button onclick="startSolo()" class="btn-solo">Modo Solitario</button>
             <button onclick="createRoom()" class="btn-create">Crear Sala</button>
             <div class="join-box">
                 <input type="text" id="roomInput" placeholder="Código">
@@ -21,9 +21,10 @@
     </div>
 
     <div id="screen-lobby" class="screen" style="display:none">
-        <h2>SALA: <span id="display-code"></span></h2>
+        <h2>SALA: <span id="display-code" style="color:#b59f3b"></span></h2>
+        <p>Esperando jugadores...</p>
         <ul id="player-list"></ul>
-        <button id="start-btn" style="display:none" onclick="startGame()">EMPEZAR PARTIDA</button>
+        <button id="start-btn" style="display:none" onclick="startGame()" class="btn-create">EMPEZAR PARTIDA</button>
     </div>
 
     <div id="screen-game" class="screen" style="display:none">
@@ -43,7 +44,6 @@
         <h1 id="winner-text"></h1>
         
         <div id="stats-solo" class="stats-container" style="display:none">
-            <h2>Tus Estadísticas</h2>
             <div class="stats-grid">
                 <div class="stat-box"><b id="stat-played">0</b><br>Partidas</div>
                 <div class="stat-box"><b id="stat-win-pct">0%</b><br>Victorias</div>
@@ -53,14 +53,14 @@
         </div>
 
         <div id="scoreboard" class="scoreboard-container" style="display:none">
-            <h2>Marcador</h2>
-            <div id="scoreboard-content" class="scoreboard-content"></div>
+            <h3>Marcador de Sala</h3>
+            <div id="scoreboard-content"></div>
         </div>
 
         <div class="button-group">
-            <button id="btn-replay" onclick="playAgain()" class="btn-replay" style="display:none">JUGAR OTRA VEZ</button>
-            <button id="btn-exit" onclick="exitGame()" class="btn-exit" style="display:none">SALIR AL MENÚ</button>
-            <p id="wait-message" style="display:none; color: #818384;">Esperando al anfitrión...</p>
+            <button id="btn-replay" onclick="playAgain()" class="btn-replay" style="display:none">OTRA PARTIDA</button>
+            <button id="btn-exit" onclick="exitGame()" class="btn-exit">SALIR AL INICIO</button>
+            <p id="wait-message" style="display:none; color: #818384; margin-top:10px;">Esperando al anfitrión...</p>
         </div>
     </div>
 
