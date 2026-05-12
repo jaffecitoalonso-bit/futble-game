@@ -1,6 +1,7 @@
 const socket = io();
 let myName = "", currentRoom = null, targetWord = "", category = "";
 let currentRow = 0, currentCol = 0, guesses = ["", "", "", "", "", ""];
+let isHost = false, isSolo = false, gameStats = { won: false, attempts: 0 };
 
 const keys = [
     ['Q','W','E','R','T','Y','U','I','O','P'],
@@ -31,6 +32,8 @@ function showScreen(id) {
 function startSolo() {
     myName = document.getElementById('username').value.trim();
     if (!myName) return alert("Escribe tu nombre");
+    isSolo = true;
+    isHost = false;
     prepareSoloGame();
 }
 
@@ -46,20 +49,31 @@ function resetGameState() {
     currentRow = 0;
     currentCol = 0;
     guesses = ["", "", "", "", "", ""];
+    gameStats = { won: false, attempts: 0 };
 }
 
 function playAgain() {
     if (currentRoom) {
-        resetGameState();
-        showScreen('screen-lobby');
+        if (!isHost) return; // Solo el anfitrión puede reiniciar
+        // No reseteamos aquí porque lo hará el evento del servidor
+        socket.emit('hostPlayAgain', currentRoom);
     } else {
         prepareSoloGame();
     }
 }
 
+function exitGame() {
+    if (currentRoom && isHost) {
+        socket.emit('hostExit', currentRoom);
+    }
+    location.reload();
+}
+
 function createRoom() {
     myName = document.getElementById('username').value.trim();
     if (!myName) return alert("Escribe tu nombre");
+    isHost = true;
+    isSolo = false;
     socket.emit('createRoom', myName);
 }
 
@@ -67,6 +81,8 @@ function joinRoom() {
     myName = document.getElementById('username').value.trim();
     const code = document.getElementById('roomInput').value.trim().toUpperCase();
     if (!myName || !code) return alert("Datos incompletos");
+    isHost = false;
+    isSolo = false;
     socket.emit('joinRoom', { name: myName, roomCode: code });
 }
 
@@ -96,7 +112,31 @@ socket.on('gameStarted', (data) => {
 
 socket.on('gameOver', (winner) => {
     document.getElementById('winner-text').innerText = "¡GANÓ " + winner.toUpperCase() + "!";
+    document.getElementById('stats-solo').style.display = 'none';
+    document.getElementById('scoreboard').style.display = 'block';
+    document.getElementById('scoreboard-content').innerText = `${winner.toUpperCase()} completó el Wordle`;
+    
+    // Solo el anfitrión ve los botones de jugar de nuevo y salir
+    if (isHost) {
+        document.getElementById('btn-replay').style.display = 'block';
+        document.getElementById('btn-exit').style.display = 'block';
+    } else {
+        document.getElementById('btn-replay').style.display = 'none';
+        document.getElementById('btn-exit').style.display = 'block';
+    }
     showScreen('screen-result');
+});
+
+socket.on('hostPlayAgain', (gameData) => {
+    targetWord = gameData.word;
+    category = gameData.cat;
+    resetGameState();
+    showScreen('screen-game');
+    initGame();
+});
+
+socket.on('hostExited', () => {
+    location.reload();
 });
 
 function initGame() {
@@ -168,13 +208,34 @@ function submitGuess() {
         updateKeyboardKey(guess[i], status);
     }
     if (guess === targetWord) {
+        gameStats.won = true;
+        gameStats.attempts = currentRow + 1;
         if(currentRoom) socket.emit('finished', { roomCode: currentRoom, name: myName });
-        else { document.getElementById('winner-text').innerText = "¡GANASTE!"; showScreen('screen-result'); }
+        else { 
+            displayResultSolo("¡GANASTE!");
+        }
     } else {
         currentRow++; currentCol = 0;
         if (currentRow === 6) {
-            document.getElementById('winner-text').innerText = "PERDISTE. ERA: " + targetWord;
-            showScreen('screen-result');
+            gameStats.won = false;
+            gameStats.attempts = 6;
+            if (!currentRoom) {
+                displayResultSolo("PERDISTE. ERA: " + targetWord);
+            } else {
+                document.getElementById('winner-text').innerText = "PERDISTE. ERA: " + targetWord;
+                showScreen('screen-result');
+            }
         }
     }
+}
+
+function displayResultSolo(result) {
+    document.getElementById('winner-text').innerText = result;
+    document.getElementById('stats-solo').style.display = 'block';
+    document.getElementById('scoreboard').style.display = 'none';
+    document.getElementById('attempts-used').innerText = gameStats.attempts;
+    document.getElementById('result-category').innerText = category;
+    document.getElementById('btn-replay').style.display = 'block';
+    document.getElementById('btn-exit').style.display = 'block';
+    showScreen('screen-result');
 }

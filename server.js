@@ -61,6 +61,24 @@ io.on('connection', (socket) => {
     socket.on('finished', ({ roomCode, name }) => {
         io.to(roomCode).emit('gameOver', name);
     });
+
+    socket.on('hostPlayAgain', (roomCode) => {
+        const room = rooms[roomCode];
+        if (room) {
+            room.gameData = wordsBank[Math.floor(Math.random() * wordsBank.length)];
+            io.to(roomCode).emit('hostPlayAgain', room.gameData);
+        }
+    });
+
+    socket.on('hostExit', (roomCode) => {
+        const room = rooms[roomCode];
+        if (room) {
+            delete rooms[roomCode];
+            io.to(roomCode).emit('hostExited');
+        }
+    });
 });
 
-server.listen(3000, () => console.log('Servidor en http://localhost:3000'));
+// No uses solo 3000, usa esto para que el servidor elija el puerto
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));

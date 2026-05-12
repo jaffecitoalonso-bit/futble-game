@@ -9,7 +9,7 @@
 <body>
     <div id="screen-start" class="screen">
         <h1>Futble</h1>
-        <input type="text" id="username" placeholder="Tu Nombre (Obligatorio)">
+        <input type="text" id="username" placeholder="Nombre">
         <div class="button-group">
             <button onclick="startSolo()" class="btn-solo">Jugar Solo</button>
             <button onclick="createRoom()" class="btn-create">Crear Sala</button>
@@ -41,9 +41,18 @@
 
     <div id="screen-result" class="screen" style="display:none">
         <h1 id="winner-text"></h1>
-        <div class="button-group">
-            <button onclick="playAgain()" class="btn-replay">JUGAR OTRA VEZ</button>
-            <button onclick="location.reload()" class="btn-exit">SALIR</button>
+        <div id="stats-solo" style="display:none" class="stats-container">
+            <h2>ESTADÍSTICAS</h2>
+            <p>Intentos usados: <span id="attempts-used">0</span>/6</p>
+            <p>Categoría: <span id="result-category"></span></p>
+        </div>
+        <div id="scoreboard" style="display:none" class="scoreboard-container">
+            <h2>MARCADOR</h2>
+            <div id="scoreboard-content"></div>
+        </div>
+        <div class="button-group" id="result-buttons">
+            <button id="btn-replay" onclick="playAgain()" class="btn-replay" style="display:none">JUGAR OTRA VEZ</button>
+            <button id="btn-exit" onclick="exitGame()" class="btn-exit">SALIR</button>
         </div>
     </div>
 

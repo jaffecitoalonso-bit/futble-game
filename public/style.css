@@ -68,3 +68,51 @@ button {
     border-radius: 4px; font-size: 0.9rem; font-weight: bold; min-width: 32px;
 }
 .key.wide { min-width: 65px; background: #565758; }
+
+.stats-container {
+    background: #3a3a3c;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.stats-container h2 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #538d4e;
+}
+
+.stats-container p {
+    font-size: 1rem;
+    margin: 10px 0;
+}
+
+.scoreboard-container {
+    background: #3a3a3c;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.scoreboard-container h2 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #b59f3b;
+}
+
+.scoreboard-content {
+    font-size: 1rem;
+    padding: 10px;
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-replay { background: #538d4e; color: white; width: 85%; }
+.btn-exit { background: #818384; color: white; width: 85%; }
