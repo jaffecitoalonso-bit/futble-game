@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futble</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="screen-start" class="screen">
+        <h1>Futble</h1>
+        <input type="text" id="username" placeholder="Tu Nombre (Obligatorio)">
+        <div class="button-group">
+            <button onclick="startSolo()" class="btn-solo">Jugar Solo</button>
+            <button onclick="createRoom()" class="btn-create">Crear Sala</button>
+            <div class="join-box">
+                <input type="text" id="roomInput" placeholder="Código">
+                <button onclick="joinRoom()" class="btn-join">Unirse</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-lobby" class="screen" style="display:none">
+        <h2>SALA: <span id="display-code"></span></h2>
+        <ul id="player-list"></ul>
+        <button id="start-btn" style="display:none" onclick="startGame()">EMPEZAR PARTIDA</button>
+    </div>
+
+    <div id="screen-game" class="screen" style="display:none">
+        <div class="info-bar">
+            <span id="category-badge"></span>
+            <p id="word-hint"></p>
+        </div>
+        <div id="board"></div>
+        <div id="keyboard">
+            <div class="key-row" id="row-1"></div>
+            <div class="key-row" id="row-2"></div>
+            <div class="key-row" id="row-3"></div>
+        </div>
+    </div>
+
+    <div id="screen-result" class="screen" style="display:none">
+        <h1 id="winner-text"></h1>
+        <div class="button-group">
+            <button onclick="playAgain()" class="btn-replay">JUGAR OTRA VEZ</button>
+            <button onclick="location.reload()" class="btn-exit">SALIR</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
