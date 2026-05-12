@@ -3,6 +3,14 @@ let myName = "", currentRoom = null, targetWord = "", category = "";
 let currentRow = 0, currentCol = 0, guesses = ["", "", "", "", "", ""];
 let isHost = false, isSolo = false;
 
+// --- CONFIGURACIÓN DE PALABRAS (SOLO) ---
+const soloWords = [
+    {word: "MESSI", cat: "LEYENDAS"}, 
+    {word: "MADRID", cat: "CLUB"}, 
+    {word: "ESPAÑA", cat: "SELECCIONES"},
+    {word: "CAMPNOU", cat: "ESTADIO"}
+];
+
 const keys = [
     ['Q','W','E','R','T','Y','U','I','O','P'],
     ['A','S','D','F','G','H','J','K','L','Ñ'],
@@ -23,36 +31,28 @@ function showScreen(id) {
     document.getElementById(id).style.display = 'block';
 }
 
+// --- LÓGICA DE INICIO ---
+
 function startSolo() {
     myName = document.getElementById('username').value.trim() || "Jugador";
-    isSolo = true; isHost = false;
+    isSolo = true; 
+    isHost = false;
     prepareSoloGame();
 }
 
 function prepareSoloGame() {
-    const soloWords = [{word: "MESSI", cat: "LEYENDAS"}, {word: "MADRID", cat: "CLUB"}, {word: "ESPAÑA", cat: "SELECCIONES"}];
     const picked = soloWords[Math.floor(Math.random() * soloWords.length)];
-    targetWord = picked.word; category = picked.cat;
+    targetWord = picked.word; 
+    category = picked.cat;
     resetGameState();
-    showScreen('screen-game'); initGame();
+    showScreen('screen-game'); 
+    initGame();
 }
 
 function resetGameState() {
-    currentRow = 0; currentCol = 0;
+    currentRow = 0; 
+    currentCol = 0;
     guesses = ["", "", "", "", "", ""];
-}
-
-function playAgain() {
-    if (isSolo) {
-        prepareSoloGame();
-    } else if (isHost) {
-        socket.emit('hostPlayAgain', currentRoom);
-    }
-}
-
-function exitGame() {
-    if (currentRoom && isHost) socket.emit('hostExit', currentRoom);
-    location.reload();
 }
 
 function createRoom() {
@@ -72,7 +72,18 @@ function joinRoom() {
 
 function startGame() { socket.emit('startGame', currentRoom); }
 
-// SOCKETS
+function playAgain() {
+    if (isSolo) prepareSoloGame();
+    else if (isHost) socket.emit('hostPlayAgain', currentRoom);
+}
+
+function exitGame() {
+    if (currentRoom && isHost) socket.emit('hostExit', currentRoom);
+    location.reload();
+}
+
+// --- SOCKETS ---
+
 socket.on('roomCreated', (data) => {
     currentRoom = data.roomCode; targetWord = data.gameData.word; category = data.gameData.cat;
     document.getElementById('display-code').innerText = data.roomCode;
@@ -94,28 +105,11 @@ socket.on('gameStarted', (data) => {
 socket.on('gameOver', (data) => {
     document.getElementById('winner-text').innerText = data.winner === myName ? "¡GANASTE!" : "GANÓ " + data.winner.toUpperCase();
     
-    if (isSolo) {
-        document.getElementById('stats-solo').style.display = 'block';
-        document.getElementById('scoreboard').style.display = 'none';
-        document.getElementById('attempts-used').innerText = currentRow + 1;
-        document.getElementById('result-category').innerText = category;
-    } else {
-        document.getElementById('stats-solo').style.display = 'none';
-        document.getElementById('scoreboard').style.display = 'block';
-        document.getElementById('scoreboard-content').innerText = 
-            data.scores.map(p => `${p.name}: ${p.wins}`).join("  |  ");
-    }
+    document.getElementById('stats-solo').style.display = 'none';
+    document.getElementById('scoreboard').style.display = 'block';
+    document.getElementById('scoreboard-content').innerText = data.scores.map(p => `${p.name}: ${p.wins}`).join("  |  ");
 
-    // Lógica de botones de host
-    if (isSolo || isHost) {
-        document.getElementById('btn-replay').style.display = 'block';
-        document.getElementById('btn-exit').style.display = 'block';
-        document.getElementById('wait-message').style.display = 'none';
-    } else {
-        document.getElementById('btn-replay').style.display = 'none';
-        document.getElementById('btn-exit').style.display = 'block';
-        document.getElementById('wait-message').style.display = 'block';
-    }
+    toggleEndButtons();
     showScreen('screen-result');
 });
 
@@ -129,7 +123,8 @@ socket.on('hostExited', () => {
     location.reload();
 });
 
-// MOTOR DEL JUEGO
+// --- MOTOR DEL JUEGO ---
+
 function initGame() {
     document.getElementById('category-badge').innerText = category;
     document.getElementById('word-hint').innerText = `La palabra tiene ${targetWord.length} letras`;
@@ -174,71 +169,16 @@ function handleKey(key) {
     }
 }
 
-function submitGuess() {
-    const guess = guesses[currentRow];
-    const startIdx = currentRow * targetWord.length;
-    for (let i = 0; i < targetWord.length; i++) {
-        const cell = document.getElementById(`cell-${startIdx + i}`);
-        const status = guess[i] === targetWord[i] ? 'correct' : (targetWord.includes(guess[i]) ? 'present' : 'absent');
-        cell.classList.add(status);
-        const keyBtn = document.getElementById(`key-${guess[i]}`);
-        if (keyBtn) keyBtn.classList.add(status);
-    }
-
-    if (guess === targetWord) {
-        if(currentRoom) socket.emit('finished', { roomCode: currentRoom, name: myName });
-        else displayResultSolo("¡GANASTE!");
-    } else {
-        currentRow++; currentCol = 0;
-        if (currentRow === 6) {
-            if (currentRoom) socket.emit('finished', { roomCode: currentRoom, name: "Nadie" });
-            else displayResultSolo("PERDISTE. ERA: " + targetWord);
-        }
-    }
-}
-
-function displayResultSolo(txt) {
-    document.getElementById('winner-text').innerText = txt;
-    document.getElementById('stats-solo').style.display = 'block';
-    document.getElementById('scoreboard').style.display = 'none';
-    document.getElementById('attempts-used').innerText = currentRow === 6 ? "X" : currentRow + 1;
-    document.getElementById('result-category').innerText = category;
-    document.getElementById('btn-replay').style.display = 'block';
-    document.getElementById('btn-exit').style.display = 'block';
-    showScreen('screen-result');
-}
-// ... (Mantén las variables del inicio igual) ...
-
-// Función para actualizar colores del teclado con jerarquía
 function updateKeyboardColor(letter, status) {
     const btn = document.getElementById(`key-${letter}`);
     if (!btn) return;
-
-    // Prioridad: 1. Correct (Verde), 2. Present (Amarillo), 3. Absent (Gris)
-    if (btn.classList.contains('correct')) return; // Si ya está en verde, no cambia
-    if (btn.classList.contains('present') && status === 'present') return; // Si ya está amarillo, no cambia a amarillo
+    if (btn.classList.contains('correct')) return; 
+    if (btn.classList.contains('present') && status === 'present') return; 
 
     btn.classList.remove('present', 'absent'); 
     btn.classList.add(status);
 }
 
-// Lógica de Estadísticas (LocalStorage)
-function saveStats(won) {
-    let stats = JSON.parse(localStorage.getItem('futble_stats')) || { played: 0, wins: 0, streak: 0 };
-    
-    stats.played += 1;
-    if (won) {
-        stats.wins += 1;
-        stats.streak += 1;
-    } else {
-        stats.streak = 0;
-    }
-    
-    localStorage.setItem('futble_stats', JSON.stringify(stats));
-    return stats;
-}
-
-// Reemplaza tu función submitGuess por esta mejorada
 function submitGuess() {
     const guess = guesses[currentRow];
     const startIdx = currentRow * targetWord.length;
@@ -248,18 +188,15 @@ function submitGuess() {
         const letter = guess[i];
         let status = 'absent';
 
-        if (letter === targetWord[i]) {
-            status = 'correct';
-        } else if (targetWord.includes(letter)) {
-            status = 'present';
-        }
+        if (letter === targetWord[i]) status = 'correct';
+        else if (targetWord.includes(letter)) status = 'present';
 
         cell.classList.add(status);
-        updateKeyboardColor(letter, status); // <-- Llamada para pintar el teclado
+        updateKeyboardColor(letter, status);
     }
 
     if (guess === targetWord) {
-        if(currentRoom) {
+        if(!isSolo && currentRoom) {
             socket.emit('finished', { roomCode: currentRoom, name: myName });
         } else {
             const finalStats = saveStats(true);
@@ -269,7 +206,7 @@ function submitGuess() {
         currentRow++;
         currentCol = 0;
         if (currentRow === 6) {
-            if (currentRoom) {
+            if (!isSolo && currentRoom) {
                 socket.emit('finished', { roomCode: currentRoom, name: "Nadie" });
             } else {
                 const finalStats = saveStats(false);
@@ -279,25 +216,47 @@ function submitGuess() {
     }
 }
 
-// Reemplaza tu displayResultSolo por esta
+// --- ESTADÍSTICAS Y FINAL ---
+
+function saveStats(won) {
+    let stats = JSON.parse(localStorage.getItem('futble_stats')) || { played: 0, wins: 0, streak: 0 };
+    stats.played += 1;
+    if (won) {
+        stats.wins += 1;
+        stats.streak += 1;
+    } else {
+        stats.streak = 0;
+    }
+    localStorage.setItem('futble_stats', JSON.stringify(stats));
+    return stats;
+}
+
 function displayResultSolo(txt, stats) {
     document.getElementById('winner-text').innerText = txt;
     document.getElementById('stats-solo').style.display = 'block';
     document.getElementById('scoreboard').style.display = 'none';
     
-    // Calcular % de victorias
     const winPct = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-    
     document.getElementById('stat-played').innerText = stats.played;
     document.getElementById('stat-win-pct').innerText = winPct + "%";
     document.getElementById('stat-streak').innerText = stats.streak;
     
-    document.getElementById('attempts-used').innerText = currentRow === 6 && txt.includes("PERDISTE") ? "X" : (currentRow + (txt.includes("GANASTE") ? 1 : 0));
+    // Si ganó, el intento es currentRow + 1 (porque currentRow empieza en 0)
+    document.getElementById('attempts-used').innerText = txt.includes("GANASTE") ? (currentRow + 1) : "X";
     document.getElementById('result-category').innerText = category;
     
-    document.getElementById('btn-replay').style.display = 'block';
-    document.getElementById('btn-exit').style.display = 'block';
+    toggleEndButtons();
     showScreen('screen-result');
 }
 
-// ... (El resto de funciones como renderKeyboard e initGame se quedan igual) ...
+function toggleEndButtons() {
+    if (isSolo || isHost) {
+        document.getElementById('btn-replay').style.display = 'block';
+        document.getElementById('btn-exit').style.display = 'block';
+        document.getElementById('wait-message').style.display = 'none';
+    } else {
+        document.getElementById('btn-replay').style.display = 'none';
+        document.getElementById('btn-exit').style.display = 'block';
+        document.getElementById('wait-message').style.display = 'block';
+    }
+}
