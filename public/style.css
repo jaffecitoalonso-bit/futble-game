@@ -11,7 +11,6 @@ body {
 }
 
 .screen { text-align: center; width: 90%; max-width: 500px; }
-
 h1 { font-size: 2.5rem; margin-bottom: 30px; color: #538d4e; }
 
 input {
@@ -34,85 +33,47 @@ button {
     border-radius: 4px;
     margin: 5px;
     text-transform: uppercase;
+    transition: 0.2s;
 }
 
-.btn-solo { background: #818384; color: white; }
-.btn-create { background: #538d4e; color: white; width: 85%; }
-.btn-join { background: #b59f3b; color: white; }
+button:active { transform: scale(0.95); }
 
-.info-bar { margin-bottom: 20px; }
-#category-badge { background: #b59f3b; padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; }
-
-#board { display: grid; gap: 5px; margin-bottom: 20px; justify-content: center; }
+/* TABLERO JUNTITO */
+#board { 
+    display: grid; 
+    gap: 2px; /* Casillas más juntas */
+    margin-bottom: 20px; 
+    justify-content: center; 
+}
 
 .cell {
-    width: 50px; height: 50px;
+    width: 52px; height: 52px;
     border: 2px solid #3a3a3c;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; font-weight: bold; text-transform: uppercase;
+    font-size: 1.6rem; font-weight: bold; text-transform: uppercase;
 }
 
-.correct { background: #538d4e; border-color: #538d4e; color: white; }
-.present { background: #b59f3b; border-color: #b59f3b; color: white; }
-.absent { background: #3a3a3c; border-color: #3a3a3c; color: white; }
-
-.key.correct { background: #538d4e; color: white; }
-.key.present { background: #b59f3b; color: white; }
-.key.absent { background: #3a3a3c; color: white; }
+/* Colores Wordle */
+.correct { background: #538d4e; border-color: #538d4e; }
+.present { background: #b59f3b; border-color: #b59f3b; }
+.absent { background: #3a3a3c; border-color: #3a3a3c; }
 
 /* Teclado */
-#keyboard { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.key-row { display: flex; justify-content: center; gap: 4px; }
 .key {
     background: #818384; color: white; padding: 15px 8px;
     border-radius: 4px; font-size: 0.9rem; font-weight: bold; min-width: 32px;
+    border: none; margin: 2px;
 }
 .key.wide { min-width: 65px; background: #565758; }
 
-.stats-container {
-    background: #3a3a3c;
+/* Contenedores Finales */
+.stats-container, .scoreboard-container {
+    background: #272729;
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
-    text-align: center;
+    border: 1px solid #3a3a3c;
 }
 
-.stats-container h2 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-    color: #538d4e;
-}
-
-.stats-container p {
-    font-size: 1rem;
-    margin: 10px 0;
-}
-
-.scoreboard-container {
-    background: #3a3a3c;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.scoreboard-container h2 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-    color: #b59f3b;
-}
-
-.scoreboard-content {
-    font-size: 1rem;
-    padding: 10px;
-}
-
-.button-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.btn-replay { background: #538d4e; color: white; width: 85%; }
-.btn-exit { background: #818384; color: white; width: 85%; }
+.btn-replay { background: #538d4e; color: white; width: 100%; }
+.btn-exit { background: #3a3a3c; color: white; width: 100%; }

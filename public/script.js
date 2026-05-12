@@ -1,7 +1,7 @@
 const socket = io();
 let myName = "", currentRoom = null, targetWord = "", category = "";
 let currentRow = 0, currentCol = 0, guesses = ["", "", "", "", "", ""];
-let isHost = false, isSolo = false, gameStats = { won: false, attempts: 0 };
+let isHost = false, isSolo = false;
 
 const keys = [
     ['Q','W','E','R','T','Y','U','I','O','P'],
@@ -9,19 +9,13 @@ const keys = [
     ['ENVIAR','Z','X','C','V','B','N','M','BORRAR']
 ];
 
-window.addEventListener('keydown', (event) => {
+// Soporte teclado físico
+window.addEventListener('keydown', (e) => {
     if (document.getElementById('screen-game').style.display !== 'block') return;
-    const key = event.key.toUpperCase();
-    if (key === 'BACKSPACE') {
-        event.preventDefault();
-        handleKey('BORRAR');
-    } else if (key === 'ENTER') {
-        event.preventDefault();
-        handleKey('ENVIAR');
-    } else if (/^[A-ZÑ]$/.test(key)) {
-        event.preventDefault();
-        handleKey(key);
-    }
+    const key = e.key.toUpperCase();
+    if (key === 'BACKSPACE') handleKey('BORRAR');
+    else if (key === 'ENTER') handleKey('ENVIAR');
+    else if (/^[A-ZÑ]$/.test(key)) handleKey(key);
 });
 
 function showScreen(id) {
@@ -30,15 +24,13 @@ function showScreen(id) {
 }
 
 function startSolo() {
-    myName = document.getElementById('username').value.trim();
-    if (!myName) return alert("Escribe tu nombre");
-    isSolo = true;
-    isHost = false;
+    myName = document.getElementById('username').value.trim() || "Jugador";
+    isSolo = true; isHost = false;
     prepareSoloGame();
 }
 
 function prepareSoloGame() {
-    const soloWords = [{word: "MESSI", cat: "LEYENDAS"}, {word: "ARSENAL", cat: "CLUB"}];
+    const soloWords = [{word: "MESSI", cat: "LEYENDAS"}, {word: "MADRID", cat: "CLUB"}, {word: "ESPAÑA", cat: "SELECCIONES"}];
     const picked = soloWords[Math.floor(Math.random() * soloWords.length)];
     targetWord = picked.word; category = picked.cat;
     resetGameState();
@@ -46,48 +38,41 @@ function prepareSoloGame() {
 }
 
 function resetGameState() {
-    currentRow = 0;
-    currentCol = 0;
+    currentRow = 0; currentCol = 0;
     guesses = ["", "", "", "", "", ""];
-    gameStats = { won: false, attempts: 0 };
 }
 
 function playAgain() {
-    if (currentRoom) {
-        if (!isHost) return; // Solo el anfitrión puede reiniciar
-        // No reseteamos aquí porque lo hará el evento del servidor
-        socket.emit('hostPlayAgain', currentRoom);
-    } else {
+    if (isSolo) {
         prepareSoloGame();
+    } else if (isHost) {
+        socket.emit('hostPlayAgain', currentRoom);
     }
 }
 
 function exitGame() {
-    if (currentRoom && isHost) {
-        socket.emit('hostExit', currentRoom);
-    }
+    if (currentRoom && isHost) socket.emit('hostExit', currentRoom);
     location.reload();
 }
 
 function createRoom() {
     myName = document.getElementById('username').value.trim();
     if (!myName) return alert("Escribe tu nombre");
-    isHost = true;
-    isSolo = false;
+    isHost = true; isSolo = false;
     socket.emit('createRoom', myName);
 }
 
 function joinRoom() {
     myName = document.getElementById('username').value.trim();
     const code = document.getElementById('roomInput').value.trim().toUpperCase();
-    if (!myName || !code) return alert("Datos incompletos");
-    isHost = false;
-    isSolo = false;
+    if (!myName || !code) return alert("Nombre y código necesarios");
+    isHost = false; isSolo = false;
     socket.emit('joinRoom', { name: myName, roomCode: code });
 }
 
 function startGame() { socket.emit('startGame', currentRoom); }
 
+// SOCKETS
 socket.on('roomCreated', (data) => {
     currentRoom = data.roomCode; targetWord = data.gameData.word; category = data.gameData.cat;
     document.getElementById('display-code').innerText = data.roomCode;
@@ -97,48 +82,54 @@ socket.on('roomCreated', (data) => {
 
 socket.on('playerJoined', (data) => {
     targetWord = data.gameData.word; category = data.gameData.cat;
-    showScreen('screen-lobby');
     document.getElementById('player-list').innerHTML = data.players.map(p => `<li>${p.name}</li>`).join('');
+    showScreen('screen-lobby');
 });
 
 socket.on('gameStarted', (data) => {
-    if (data) {
-        targetWord = data.word;
-        category = data.cat;
-    }
-    resetGameState();
-    showScreen('screen-game'); initGame();
+    targetWord = data.word; category = data.cat;
+    resetGameState(); showScreen('screen-game'); initGame();
 });
 
-socket.on('gameOver', (winner) => {
-    document.getElementById('winner-text').innerText = "¡GANÓ " + winner.toUpperCase() + "!";
-    document.getElementById('stats-solo').style.display = 'none';
-    document.getElementById('scoreboard').style.display = 'block';
-    document.getElementById('scoreboard-content').innerText = `${winner.toUpperCase()} completó el Wordle`;
+socket.on('gameOver', (data) => {
+    document.getElementById('winner-text').innerText = data.winner === myName ? "¡GANASTE!" : "GANÓ " + data.winner.toUpperCase();
     
-    // Solo el anfitrión ve los botones de jugar de nuevo y salir
-    if (isHost) {
+    if (isSolo) {
+        document.getElementById('stats-solo').style.display = 'block';
+        document.getElementById('scoreboard').style.display = 'none';
+        document.getElementById('attempts-used').innerText = currentRow + 1;
+        document.getElementById('result-category').innerText = category;
+    } else {
+        document.getElementById('stats-solo').style.display = 'none';
+        document.getElementById('scoreboard').style.display = 'block';
+        document.getElementById('scoreboard-content').innerText = 
+            data.scores.map(p => `${p.name}: ${p.wins}`).join("  |  ");
+    }
+
+    // Lógica de botones de host
+    if (isSolo || isHost) {
         document.getElementById('btn-replay').style.display = 'block';
         document.getElementById('btn-exit').style.display = 'block';
+        document.getElementById('wait-message').style.display = 'none';
     } else {
         document.getElementById('btn-replay').style.display = 'none';
         document.getElementById('btn-exit').style.display = 'block';
+        document.getElementById('wait-message').style.display = 'block';
     }
     showScreen('screen-result');
 });
 
 socket.on('hostPlayAgain', (gameData) => {
-    targetWord = gameData.word;
-    category = gameData.cat;
-    resetGameState();
-    showScreen('screen-game');
-    initGame();
+    targetWord = gameData.word; category = gameData.cat;
+    resetGameState(); showScreen('screen-game'); initGame();
 });
 
 socket.on('hostExited', () => {
+    alert("El anfitrión cerró la sala");
     location.reload();
 });
 
+// MOTOR DEL JUEGO
 function initGame() {
     document.getElementById('category-badge').innerText = category;
     document.getElementById('word-hint').innerText = `La palabra tiene ${targetWord.length} letras`;
@@ -168,30 +159,17 @@ function renderKeyboard() {
     });
 }
 
-function updateKeyboardKey(key, status) {
-    const keyButton = document.getElementById(`key-${key}`);
-    if (!keyButton) return;
-    const priority = { correct: 3, present: 2, absent: 1 };
-    const currentStatus = keyButton.dataset.status;
-    if (currentStatus && priority[currentStatus] >= priority[status]) return;
-    keyButton.dataset.status = status;
-    keyButton.classList.remove('correct', 'present', 'absent');
-    keyButton.classList.add(status);
-}
-
 function handleKey(key) {
     if (key === 'BORRAR') {
         if (currentCol > 0) {
             currentCol--;
-            const idx = (currentRow * targetWord.length) + currentCol;
-            document.getElementById(`cell-${idx}`).innerText = "";
+            document.getElementById(`cell-${(currentRow * targetWord.length) + currentCol}`).innerText = "";
             guesses[currentRow] = guesses[currentRow].slice(0, -1);
         }
     } else if (key === 'ENVIAR') {
         if (guesses[currentRow].length === targetWord.length) submitGuess();
     } else if (guesses[currentRow].length < targetWord.length && key.length === 1) {
-        const idx = (currentRow * targetWord.length) + currentCol;
-        document.getElementById(`cell-${idx}`).innerText = key;
+        document.getElementById(`cell-${(currentRow * targetWord.length) + currentCol}`).innerText = key;
         guesses[currentRow] += key; currentCol++;
     }
 }
@@ -201,39 +179,29 @@ function submitGuess() {
     const startIdx = currentRow * targetWord.length;
     for (let i = 0; i < targetWord.length; i++) {
         const cell = document.getElementById(`cell-${startIdx + i}`);
-        const status = guess[i] === targetWord[i]
-            ? 'correct'
-            : (targetWord.includes(guess[i]) ? 'present' : 'absent');
+        const status = guess[i] === targetWord[i] ? 'correct' : (targetWord.includes(guess[i]) ? 'present' : 'absent');
         cell.classList.add(status);
-        updateKeyboardKey(guess[i], status);
+        const keyBtn = document.getElementById(`key-${guess[i]}`);
+        if (keyBtn) keyBtn.classList.add(status);
     }
+
     if (guess === targetWord) {
-        gameStats.won = true;
-        gameStats.attempts = currentRow + 1;
         if(currentRoom) socket.emit('finished', { roomCode: currentRoom, name: myName });
-        else { 
-            displayResultSolo("¡GANASTE!");
-        }
+        else displayResultSolo("¡GANASTE!");
     } else {
         currentRow++; currentCol = 0;
         if (currentRow === 6) {
-            gameStats.won = false;
-            gameStats.attempts = 6;
-            if (!currentRoom) {
-                displayResultSolo("PERDISTE. ERA: " + targetWord);
-            } else {
-                document.getElementById('winner-text').innerText = "PERDISTE. ERA: " + targetWord;
-                showScreen('screen-result');
-            }
+            if (currentRoom) socket.emit('finished', { roomCode: currentRoom, name: "Nadie" });
+            else displayResultSolo("PERDISTE. ERA: " + targetWord);
         }
     }
 }
 
-function displayResultSolo(result) {
-    document.getElementById('winner-text').innerText = result;
+function displayResultSolo(txt) {
+    document.getElementById('winner-text').innerText = txt;
     document.getElementById('stats-solo').style.display = 'block';
     document.getElementById('scoreboard').style.display = 'none';
-    document.getElementById('attempts-used').innerText = gameStats.attempts;
+    document.getElementById('attempts-used').innerText = currentRow === 6 ? "X" : currentRow + 1;
     document.getElementById('result-category').innerText = category;
     document.getElementById('btn-replay').style.display = 'block';
     document.getElementById('btn-exit').style.display = 'block';

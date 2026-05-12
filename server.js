@@ -1,7 +1,6 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -9,17 +8,9 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 const wordsBank = [
-    { word: "MESSI", cat: "LEYENDAS" },
-    { word: "MBAPPE", cat: "JUGADOR" },
-    { word: "RONALDO", cat: "LEYENDAS" },
-    { word: "KLOPP", cat: "TECNICOS" },
-    { word: "ANACELOTTI", cat: "TECNICOS" },
-    { word: "BERNABEU", cat: "ESTADIO" },
-    { word: "CAMPNOU", cat: "ESTADIO" },
-    { word: "ARSENAL", cat: "CLUB" },
-    { word: "MADRID", cat: "CLUB" },
-    { word: "ESPAÑA", cat: "SELECCIONES" },
-    { word: "BRASIL", cat: "SELECCIONES" }
+    { word: "MESSI", cat: "LEYENDAS" }, { word: "MBAPPE", cat: "JUGADOR" },
+    { word: "RONALDO", cat: "LEYENDAS" }, { word: "KLOPP", cat: "TECNICOS" },
+    { word: "BERNABEU", cat: "ESTADIO" }, { word: "MADRID", cat: "CLUB" }
 ];
 
 let rooms = {};
@@ -27,58 +18,51 @@ let rooms = {};
 io.on('connection', (socket) => {
     socket.on('createRoom', (name) => {
         const roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const gameData = wordsBank[Math.floor(Math.random() * wordsBank.length)];
         rooms[roomCode] = { 
-            players: [{ id: socket.id, name }], 
-            gameData: gameData 
+            players: [{ id: socket.id, name, wins: 0 }], 
+            gameData: wordsBank[Math.floor(Math.random() * wordsBank.length)],
+            hostId: socket.id 
         };
         socket.join(roomCode);
-        socket.emit('roomCreated', { roomCode, gameData });
+        socket.emit('roomCreated', { roomCode, gameData: rooms[roomCode].gameData });
     });
 
     socket.on('joinRoom', ({ name, roomCode }) => {
         const room = rooms[roomCode];
         if (room && room.players.length < 2) {
-            room.players.push({ id: socket.id, name });
+            room.players.push({ id: socket.id, name, wins: 0 });
             socket.join(roomCode);
-            io.to(roomCode).emit('playerJoined', {
-                players: room.players,
-                gameData: room.gameData
-            });
+            io.to(roomCode).emit('playerJoined', { players: room.players, gameData: room.gameData });
         } else {
-            socket.emit('error', 'Sala llena o inexistente');
+            socket.emit('error', 'Sala no disponible');
         }
     });
 
     socket.on('startGame', (roomCode) => {
-        const room = rooms[roomCode];
-        if (room) {
-            room.gameData = wordsBank[Math.floor(Math.random() * wordsBank.length)];
-            io.to(roomCode).emit('gameStarted', room.gameData);
-        }
+        io.to(roomCode).emit('gameStarted', rooms[roomCode].gameData);
     });
 
     socket.on('finished', ({ roomCode, name }) => {
-        io.to(roomCode).emit('gameOver', name);
+        const room = rooms[roomCode];
+        if (room) {
+            const player = room.players.find(p => p.name === name);
+            if (player) player.wins++;
+            io.to(roomCode).emit('gameOver', { winner: name, scores: room.players });
+        }
     });
 
     socket.on('hostPlayAgain', (roomCode) => {
-        const room = rooms[roomCode];
-        if (room) {
-            room.gameData = wordsBank[Math.floor(Math.random() * wordsBank.length)];
-            io.to(roomCode).emit('hostPlayAgain', room.gameData);
+        if (rooms[roomCode]) {
+            rooms[roomCode].gameData = wordsBank[Math.floor(Math.random() * wordsBank.length)];
+            io.to(roomCode).emit('hostPlayAgain', rooms[roomCode].gameData);
         }
     });
 
     socket.on('hostExit', (roomCode) => {
-        const room = rooms[roomCode];
-        if (room) {
-            delete rooms[roomCode];
-            io.to(roomCode).emit('hostExited');
-        }
+        delete rooms[roomCode];
+        io.to(roomCode).emit('hostExited');
     });
 });
 
-// No uses solo 3000, usa esto para que el servidor elija el puerto
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+server.listen(PORT, () => console.log(`Puerto ${PORT}`));

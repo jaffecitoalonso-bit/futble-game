@@ -41,18 +41,22 @@
 
     <div id="screen-result" class="screen" style="display:none">
         <h1 id="winner-text"></h1>
-        <div id="stats-solo" style="display:none" class="stats-container">
-            <h2>ESTADÍSTICAS</h2>
-            <p>Intentos usados: <span id="attempts-used">0</span>/6</p>
+        
+        <div id="stats-solo" class="stats-container" style="display:none">
+            <h2>Estadísticas</h2>
+            <p>Intentos: <span id="attempts-used">0</span>/6</p>
             <p>Categoría: <span id="result-category"></span></p>
         </div>
-        <div id="scoreboard" style="display:none" class="scoreboard-container">
-            <h2>MARCADOR</h2>
-            <div id="scoreboard-content"></div>
+
+        <div id="scoreboard" class="scoreboard-container" style="display:none">
+            <h2>Marcador</h2>
+            <div id="scoreboard-content" class="scoreboard-content"></div>
         </div>
-        <div class="button-group" id="result-buttons">
+
+        <div class="button-group">
             <button id="btn-replay" onclick="playAgain()" class="btn-replay" style="display:none">JUGAR OTRA VEZ</button>
-            <button id="btn-exit" onclick="exitGame()" class="btn-exit">SALIR</button>
+            <button id="btn-exit" onclick="exitGame()" class="btn-exit" style="display:none">SALIR</button>
+            <p id="wait-message" style="display:none; color: #818384;">Esperando decisión del anfitrión...</p>
         </div>
     </div>
 
