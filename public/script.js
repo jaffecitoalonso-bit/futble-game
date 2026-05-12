@@ -3,12 +3,13 @@ let myName = "", currentRoom = null, targetWord = "", category = "";
 let currentRow = 0, currentCol = 0, guesses = ["", "", "", "", "", ""];
 let isHost = false, isSolo = false;
 
-// --- CONFIGURACIÓN DE PALABRAS (SOLO) ---
+// BASE DE DATOS MODO SOLO
 const soloWords = [
-    {word: "MESSI", cat: "LEYENDAS"}, 
-    {word: "MADRID", cat: "CLUB"}, 
+    {word: "MESSI", cat: "LEYENDAS"},
+    {word: "ARSENAL", cat: "CLUB"},
     {word: "ESPAÑA", cat: "SELECCIONES"},
-    {word: "CAMPNOU", cat: "ESTADIO"}
+    {word: "ZIDANE", cat: "LEYENDAS"},
+    {word: "ANFIELD", cat: "ESTADIO"}
 ];
 
 const keys = [
@@ -17,7 +18,6 @@ const keys = [
     ['ENVIAR','Z','X','C','V','B','N','M','BORRAR']
 ];
 
-// Soporte teclado físico
 window.addEventListener('keydown', (e) => {
     if (document.getElementById('screen-game').style.display !== 'block') return;
     const key = e.key.toUpperCase();
@@ -31,28 +31,14 @@ function showScreen(id) {
     document.getElementById(id).style.display = 'block';
 }
 
-// --- LÓGICA DE INICIO ---
+// --- INICIO DE JUEGO ---
 
 function startSolo() {
     myName = document.getElementById('username').value.trim() || "Jugador";
-    isSolo = true; 
-    isHost = false;
-    prepareSoloGame();
-}
-
-function prepareSoloGame() {
+    isSolo = true; isHost = false; currentRoom = null;
     const picked = soloWords[Math.floor(Math.random() * soloWords.length)];
-    targetWord = picked.word; 
-    category = picked.cat;
-    resetGameState();
-    showScreen('screen-game'); 
-    initGame();
-}
-
-function resetGameState() {
-    currentRow = 0; 
-    currentCol = 0;
-    guesses = ["", "", "", "", "", ""];
+    targetWord = picked.word; category = picked.cat;
+    resetGameData();
 }
 
 function createRoom() {
@@ -65,69 +51,21 @@ function createRoom() {
 function joinRoom() {
     myName = document.getElementById('username').value.trim();
     const code = document.getElementById('roomInput').value.trim().toUpperCase();
-    if (!myName || !code) return alert("Nombre y código necesarios");
+    if (!myName || !code) return alert("Faltan datos");
     isHost = false; isSolo = false;
     socket.emit('joinRoom', { name: myName, roomCode: code });
 }
 
-function startGame() { socket.emit('startGame', currentRoom); }
-
-function playAgain() {
-    if (isSolo) prepareSoloGame();
-    else if (isHost) socket.emit('hostPlayAgain', currentRoom);
+function resetGameData() {
+    currentRow = 0; currentCol = 0;
+    guesses = ["", "", "", "", "", ""];
+    showScreen('screen-game');
+    initBoard();
 }
 
-function exitGame() {
-    if (currentRoom && isHost) socket.emit('hostExit', currentRoom);
-    location.reload();
-}
-
-// --- SOCKETS ---
-
-socket.on('roomCreated', (data) => {
-    currentRoom = data.roomCode; targetWord = data.gameData.word; category = data.gameData.cat;
-    document.getElementById('display-code').innerText = data.roomCode;
-    document.getElementById('start-btn').style.display = 'block';
-    showScreen('screen-lobby');
-});
-
-socket.on('playerJoined', (data) => {
-    targetWord = data.gameData.word; category = data.gameData.cat;
-    document.getElementById('player-list').innerHTML = data.players.map(p => `<li>${p.name}</li>`).join('');
-    showScreen('screen-lobby');
-});
-
-socket.on('gameStarted', (data) => {
-    targetWord = data.word; category = data.cat;
-    resetGameState(); showScreen('screen-game'); initGame();
-});
-
-socket.on('gameOver', (data) => {
-    document.getElementById('winner-text').innerText = data.winner === myName ? "¡GANASTE!" : "GANÓ " + data.winner.toUpperCase();
-    
-    document.getElementById('stats-solo').style.display = 'none';
-    document.getElementById('scoreboard').style.display = 'block';
-    document.getElementById('scoreboard-content').innerText = data.scores.map(p => `${p.name}: ${p.wins}`).join("  |  ");
-
-    toggleEndButtons();
-    showScreen('screen-result');
-});
-
-socket.on('hostPlayAgain', (gameData) => {
-    targetWord = gameData.word; category = gameData.cat;
-    resetGameState(); showScreen('screen-game'); initGame();
-});
-
-socket.on('hostExited', () => {
-    alert("El anfitrión cerró la sala");
-    location.reload();
-});
-
-// --- MOTOR DEL JUEGO ---
-
-function initGame() {
+function initBoard() {
     document.getElementById('category-badge').innerText = category;
-    document.getElementById('word-hint').innerText = `La palabra tiene ${targetWord.length} letras`;
+    document.getElementById('word-hint').innerText = `Palabra de ${targetWord.length} letras`;
     const board = document.getElementById('board');
     board.style.gridTemplateColumns = `repeat(${targetWord.length}, 1fr)`;
     board.innerHTML = '';
@@ -145,8 +83,7 @@ function renderKeyboard() {
         const rowDiv = document.getElementById(`row-${i+1}`);
         row.forEach(key => {
             const btn = document.createElement('button');
-            btn.id = `key-${key}`;
-            btn.innerText = key;
+            btn.id = `key-${key}`; btn.innerText = key;
             btn.className = 'key' + (key.length > 1 ? ' wide' : '');
             btn.onclick = () => handleKey(key);
             rowDiv.appendChild(btn);
@@ -154,29 +91,22 @@ function renderKeyboard() {
     });
 }
 
+// --- JUGABILIDAD ---
+
 function handleKey(key) {
+    const startIdx = currentRow * targetWord.length;
     if (key === 'BORRAR') {
         if (currentCol > 0) {
             currentCol--;
-            document.getElementById(`cell-${(currentRow * targetWord.length) + currentCol}`).innerText = "";
+            document.getElementById(`cell-${startIdx + currentCol}`).innerText = "";
             guesses[currentRow] = guesses[currentRow].slice(0, -1);
         }
     } else if (key === 'ENVIAR') {
         if (guesses[currentRow].length === targetWord.length) submitGuess();
     } else if (guesses[currentRow].length < targetWord.length && key.length === 1) {
-        document.getElementById(`cell-${(currentRow * targetWord.length) + currentCol}`).innerText = key;
+        document.getElementById(`cell-${startIdx + currentCol}`).innerText = key;
         guesses[currentRow] += key; currentCol++;
     }
-}
-
-function updateKeyboardColor(letter, status) {
-    const btn = document.getElementById(`key-${letter}`);
-    if (!btn) return;
-    if (btn.classList.contains('correct')) return; 
-    if (btn.classList.contains('present') && status === 'present') return; 
-
-    btn.classList.remove('present', 'absent'); 
-    btn.classList.add(status);
 }
 
 function submitGuess() {
@@ -184,79 +114,109 @@ function submitGuess() {
     const startIdx = currentRow * targetWord.length;
     
     for (let i = 0; i < targetWord.length; i++) {
-        const cell = document.getElementById(`cell-${startIdx + i}`);
         const letter = guess[i];
+        const cell = document.getElementById(`cell-${startIdx + i}`);
         let status = 'absent';
-
         if (letter === targetWord[i]) status = 'correct';
         else if (targetWord.includes(letter)) status = 'present';
-
+        
         cell.classList.add(status);
         updateKeyboardColor(letter, status);
     }
 
     if (guess === targetWord) {
-        if(!isSolo && currentRoom) {
-            socket.emit('finished', { roomCode: currentRoom, name: myName });
-        } else {
-            const finalStats = saveStats(true);
-            displayResultSolo("¡GANASTE!", finalStats);
-        }
+        endGame(true);
     } else {
-        currentRow++;
-        currentCol = 0;
-        if (currentRow === 6) {
-            if (!isSolo && currentRoom) {
-                socket.emit('finished', { roomCode: currentRoom, name: "Nadie" });
-            } else {
-                const finalStats = saveStats(false);
-                displayResultSolo("PERDISTE. ERA: " + targetWord, finalStats);
-            }
-        }
+        currentRow++; currentCol = 0;
+        if (currentRow === 6) endGame(false);
     }
 }
 
-// --- ESTADÍSTICAS Y FINAL ---
+function updateKeyboardColor(letter, status) {
+    const btn = document.getElementById(`key-${letter}`);
+    if (!btn || btn.classList.contains('correct')) return;
+    if (btn.classList.contains('present') && status === 'present') return;
+    btn.classList.remove('present', 'absent');
+    btn.classList.add(status);
+}
+
+// --- FINALIZACIÓN ---
+
+function endGame(won) {
+    if (isSolo) {
+        const stats = saveStats(won);
+        displayResult(won ? "¡ACERTASTE!" : "PERDISTE. ERA: " + targetWord, stats);
+    } else {
+        socket.emit('finished', { roomCode: currentRoom, name: won ? myName : "Nadie" });
+    }
+}
 
 function saveStats(won) {
-    let stats = JSON.parse(localStorage.getItem('futble_stats')) || { played: 0, wins: 0, streak: 0 };
-    stats.played += 1;
-    if (won) {
-        stats.wins += 1;
-        stats.streak += 1;
-    } else {
-        stats.streak = 0;
-    }
-    localStorage.setItem('futble_stats', JSON.stringify(stats));
-    return stats;
+    let s = JSON.parse(localStorage.getItem('futble_stats')) || { played: 0, wins: 0, streak: 0 };
+    s.played++;
+    if (won) { s.wins++; s.streak++; } else { s.streak = 0; }
+    localStorage.setItem('futble_stats', JSON.stringify(s));
+    return s;
 }
 
-function displayResultSolo(txt, stats) {
+function displayResult(txt, stats) {
     document.getElementById('winner-text').innerText = txt;
-    document.getElementById('stats-solo').style.display = 'block';
-    document.getElementById('scoreboard').style.display = 'none';
+    if (isSolo) {
+        document.getElementById('stats-solo').style.display = 'block';
+        document.getElementById('scoreboard').style.display = 'none';
+        document.getElementById('stat-played').innerText = stats.played;
+        document.getElementById('stat-win-pct').innerText = Math.round((stats.wins/stats.played)*100) + "%";
+        document.getElementById('stat-streak').innerText = stats.streak;
+        document.getElementById('attempts-used').innerText = (currentRow < 6 && !txt.includes("PERDISTE")) ? (currentRow + 1) : "X";
+        document.getElementById('result-category').innerText = category;
+    }
     
-    const winPct = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-    document.getElementById('stat-played').innerText = stats.played;
-    document.getElementById('stat-win-pct').innerText = winPct + "%";
-    document.getElementById('stat-streak').innerText = stats.streak;
+    // Botones según rol
+    document.getElementById('btn-replay').style.display = (isSolo || isHost) ? 'block' : 'none';
+    document.getElementById('btn-exit').style.display = 'block';
+    document.getElementById('wait-message').style.display = (!isSolo && !isHost) ? 'block' : 'none';
     
-    // Si ganó, el intento es currentRow + 1 (porque currentRow empieza en 0)
-    document.getElementById('attempts-used').innerText = txt.includes("GANASTE") ? (currentRow + 1) : "X";
-    document.getElementById('result-category').innerText = category;
-    
-    toggleEndButtons();
     showScreen('screen-result');
 }
 
-function toggleEndButtons() {
-    if (isSolo || isHost) {
-        document.getElementById('btn-replay').style.display = 'block';
-        document.getElementById('btn-exit').style.display = 'block';
-        document.getElementById('wait-message').style.display = 'none';
-    } else {
-        document.getElementById('btn-replay').style.display = 'none';
-        document.getElementById('btn-exit').style.display = 'block';
-        document.getElementById('wait-message').style.display = 'block';
-    }
+// --- SOCKETS EVENTS ---
+
+socket.on('roomCreated', (data) => {
+    currentRoom = data.roomCode; targetWord = data.gameData.word; category = data.gameData.cat;
+    document.getElementById('display-code').innerText = data.roomCode;
+    document.getElementById('start-btn').style.display = 'block';
+    showScreen('screen-lobby');
+});
+
+socket.on('playerJoined', (data) => {
+    document.getElementById('player-list').innerHTML = data.players.map(p => `<li>${p.name}</li>`).join('');
+});
+
+socket.on('gameStarted', (data) => {
+    targetWord = data.word; category = data.cat;
+    resetGameData();
+});
+
+socket.on('gameOver', (data) => {
+    document.getElementById('stats-solo').style.display = 'none';
+    document.getElementById('scoreboard').style.display = 'block';
+    document.getElementById('scoreboard-content').innerText = data.scores.map(p => `${p.name}: ${p.wins}`).join(" | ");
+    displayResult(data.winner === "Nadie" ? "NADIE ACERTÓ" : "GANÓ " + data.winner);
+});
+
+socket.on('hostPlayAgain', (data) => {
+    targetWord = data.word; category = data.cat;
+    resetGameData();
+});
+
+socket.on('hostExited', () => { location.reload(); });
+
+function startGame() { socket.emit('startGame', currentRoom); }
+function playAgain() { 
+    if (isSolo) startSolo(); 
+    else socket.emit('hostPlayAgain', currentRoom); 
+}
+function exitGame() { 
+    if (isHost && currentRoom) socket.emit('hostExit', currentRoom); 
+    location.reload(); 
 }
